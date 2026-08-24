@@ -1,143 +1,98 @@
 # Crunchbase Scraper
 
-Pull any Crunchbase Advanced Search into a clean CSV. Paste your search URL and your
-cookie, see how many records matched, choose how many you want, and watch the table
-fill up in real time.
+Pull any Crunchbase Advanced Search into a clean CSV. One line in your browser console —
+no install, no API key, nothing to sign up for, no cookie to paste.
 
-Runs entirely on your own machine against your own Crunchbase session. No account to
-create, no API key, no data sent to a third party.
+You see how many records matched, choose how many you want, watch the table fill in real
+time, and download the file.
+
+## Use it
+
+Open your search on Crunchbase while signed in, press <kbd>F12</kbd> → **Console**, paste:
+
+```js
+fetch('https://raw.githubusercontent.com/ZieXBT/crunchbase-scraper/main/scraper.js').then(r=>r.text()).then(eval)
+```
+
+That's it. A panel opens over the page:
 
 ```
-┌── 1 Connect ──────┐   ┌── 2 Review ───────┐   ┌── 3 Export ───────┐
-│ search URL        │ → │ 12,500 records    │ → │ live table        │
-│ cookie            │   │ filters decoded   │   │ progress + CSV    │
+┌── Review ─────────┐   ┌── Choose ─────────┐   ┌── Export ─────────┐
+│ 412 records       │ → │ how many rows     │ → │ live table        │
+│ filters decoded   │   │ (all by default)  │   │ download CSV      │
 └───────────────────┘   └───────────────────┘   └───────────────────┘
 ```
 
-## Run it
+Prefer a button? Make a bookmark with that same line prefixed by `javascript:` as the URL,
+and it becomes one click on any Crunchbase page.
 
-Needs Node 18 or newer. No dependencies to install.
+### Getting your search URL
 
-```bash
-git clone https://github.com/ZieXBT/crunchbase-scraper.git
-cd crunchbase-scraper
-npm start
-```
-
-Open <http://localhost:4300>.
-
-Want to see the interface before you hand over a cookie? `npm run demo` boots the same
-app against 12,500 synthetic records.
-
-## Getting your cookie
-
-**Crunchbase sessions last about five minutes.** Export the cookie immediately before you
-scrape — not five minutes earlier. The app decodes the expiry and shows you a live
-countdown, and warns you before starting a scrape that would outlast it.
-
-### With Cookie-Editor (easiest)
-
-1. Install [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm).
-2. Open `crunchbase.com` and make sure you are signed in.
-3. Click the Cookie-Editor icon in the toolbar.
-4. **Export** (bottom right) → **Export as JSON**. It copies to your clipboard.
-5. Paste it into the cookie box and hit **Check search** right away.
-
-### Without the extension
-
-`F12` → **Network** → reload → click any `crunchbase.com` request → under
-**Request Headers**, copy the whole `cookie:` value.
-
-Both formats are accepted — the JSON array and the raw `name=value; name=value` header.
-
-Your cookie is your login. It is held in memory for the duration of the scrape and is
-never written to disk or sent anywhere except Crunchbase. Don't paste it into anything
-you didn't start yourself, and don't commit it.
-
-## Getting your search URL
-
-Crunchbase → **Advanced Search** → build your filters → copy the address bar. It looks
-like:
+Crunchbase → **Advanced Search** → build your filters → the address bar looks like:
 
 ```
-https://www.crunchbase.com/discover/principal.investors/e290f9ecc71c6841b496090ba9a2ac89
+https://www.crunchbase.com/discover/organization.companies/439877ffd921c234cbca0f281143f6ff
 ```
 
-Any collection works — organizations, people, funding rounds, investors, acquisitions.
+Any collection works — companies, people, funding rounds, investors, acquisitions. Just run
+the snippet while that page is open.
+
+## Why it runs in the browser
+
+Crunchbase sits behind Cloudflare bot protection that fingerprints the TLS handshake. A
+local script or server — Node, Python, curl — gets a `403` challenge no matter how good its
+cookie or headers are. Running inside the page means your browser makes the request: right
+fingerprint, your own live session, nothing to copy around and nothing to expire.
+
+It also means your credentials never leave your browser. There is no server here to send
+them to.
 
 ## What you get
 
-The CSV columns follow whichever fields your saved search selected, tidied for
-spreadsheet use:
+Columns follow whatever fields your saved search selected, tidied for spreadsheet use:
 
-- `identifier` is split into a readable `name` plus a `crunchbase_url`
-- location arrays are split into `city`, `region`, `country`, plus the full path
-- enum values are title-cased (`micro_vc` → `Micro Vc`)
-- money fields resolve to their USD value
-- multi-line descriptions are collapsed to one line
-- everything is quote-escaped, UTF-8 with a BOM so Excel opens it correctly
+- `identifier` split into a readable `name` plus a `crunchbase_url`
+- locations split into `city`, `region`, `country`, plus the full path
+- enum values title-cased (`micro_vc` → `Micro Vc`)
+- money fields resolved to their USD value
+- multi-line descriptions collapsed to one line
+- quote-escaped, UTF-8 with a BOM so Excel opens it correctly
 
-Identity columns come first, `uuid` and long descriptions last.
+Identity columns first, `uuid` and long descriptions last.
+
+## It adapts to your account
+
+Crunchbase gates the export path by plan, so the scraper probes what yours allows and tells
+you up front rather than failing halfway:
+
+| | Signed out / free | Crunchbase Pro |
+|---|---|---|
+| Rows per request | 15 | 1,000 |
+| Pagination past page 1 | not allowed | allowed |
+| website, linkedin, email, phone | not allowed | allowed |
+
+If a field is gated it is dropped from the request and named on the review screen. If
+pagination is blocked, you are told before you start that only the first page is reachable.
+
+**Signed out is the common gotcha** — an anonymous session looks like a broken scraper.
+If numbers seem capped, check you are actually logged in.
 
 ## The 10,000-record ceiling
 
-Crunchbase stops paginating any single sort order at 10,000 rows, even when the search
-matches more. This scraper detects that and re-runs the search with the sort reversed,
-merging on `uuid`, which reaches roughly 20,000 records on a single search.
+Crunchbase stops paginating any single sort order at 10,000 rows, even when more match. The
+scraper detects that and re-runs the search with the sort reversed, merging on `uuid`, which
+reaches roughly 20,000 records on one search.
 
-Above that, the tail is genuinely unreachable and the app tells you so on the review
-screen rather than silently handing you a short file. Split the search into narrower
-filters — by location, headcount, or founding year — and run each separately.
-
-## How it works
-
-| File | Role |
-|---|---|
-| `server.js` | Static host + two endpoints: `/api/inspect`, `/api/scrape` (server-sent events) |
-| `crunchbase.js` | Talks to Crunchbase's `v4` endpoints: parsing, retries, cursor pagination, the reverse sweep |
-| `cookies.js` | Accepts Cookie-Editor JSON or a raw header; decodes session expiry |
-| `flatten.js` | Shape-driven flattening of nested entities into CSV columns |
-| `public/` | The three-step interface |
-| `test/fake-crunchbase.js` | Stubs `fetch` with a synthetic Crunchbase for `npm run demo` |
-
-Rows stream from Crunchbase → server → browser as they arrive, so the table starts
-filling within a second or two and the CSV is assembled client-side.
-
-Requests are paced with backoff and retry on 429 and 5xx. Pulling tens of thousands of
-records will take a few minutes; that pacing is deliberate.
-
-## Your Crunchbase plan decides how much you can pull
-
-This scrapes what your logged-in account is entitled to — nothing more. Crunchbase
-gates the export path by plan, and the scraper adapts to whatever yours allows:
-
-| Capability | Free / Basic account | Crunchbase Pro |
-|---|---|---|
-| Rows per request | 15 | 1,000 |
-| **Pagination (beyond the first page)** | **not allowed** | allowed |
-| Fields like website, linkedin, email, phone | not allowed | allowed |
-| Practical max per search | **~15 records, one page** | ~20,000 |
-
-On a non-Pro account the API returns *"insufficient permissions to paginate"* after the
-first page, so only that first page (up to 15 rows) can be exported. The review screen
-detects this and tells you before you start, and it drops any Pro-only fields
-automatically rather than erroring. Pulling thousands of records needs a Pro plan.
-
-## If a scrape stops early
-
-Crunchbase's `authcookie` is a short-lived JWT — roughly five minutes. A large pull can
-outlive it. When that happens the run stops with a clear message and **the rows already
-retrieved stay downloadable**, so nothing is lost. Grab a fresh cookie and run the
-remainder.
-
-To avoid it entirely, either scrape in chunks that fit the window, or re-export right
-before you start.
+Past that the tail is genuinely unreachable, and the review screen says so rather than
+handing you a short file that looks complete. Split the search into narrower filters — by
+location, headcount, or founding year — and run each.
 
 ## Notes
 
-- This uses Crunchbase's internal web endpoints, the same ones the site calls in your
-  browser. They aren't a documented public API and can change.
-- You're responsible for staying within Crunchbase's terms and your own plan's limits.
-- Scrape what your account can already see.
+- Uses Crunchbase's internal `v4` endpoints, the same ones the site calls in your browser.
+  They are not a documented public API and can change.
+- Requests are paced deliberately. Pulling tens of thousands of rows takes a few minutes;
+  going faster risks a rate limit on your account.
+- Scrape what your account can already see, and stay within Crunchbase's terms.
 
 MIT.

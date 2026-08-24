@@ -121,6 +121,14 @@ const server = http.createServer(async (req, res) => {
 
     // static files
     const rel = req.url === '/' ? 'index.html' : decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
+    // scraper.js is loaded cross-origin from the Crunchbase tab, so it needs CORS
+    if (rel === 'scraper.js') {
+      const js = await fs.promises.readFile(path.join(__dirname, 'scraper.js')).catch(() => null);
+      if (!js) { res.writeHead(404); return res.end('Not found'); }
+      res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8',
+                           'access-control-allow-origin': '*', 'cache-control': 'no-store' });
+      return res.end(js);
+    }
     const file = path.join(PUBLIC, rel);
     if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end('Forbidden'); }
     const buf = await fs.promises.readFile(file).catch(() => null);

@@ -31,10 +31,24 @@ app against 12,500 synthetic records.
 
 ## Getting your cookie
 
-1. Open Crunchbase in Chrome while signed in.
-2. `F12` → **Network** tab → reload the page.
-3. Click any request to `crunchbase.com`.
-4. Under **Request Headers**, copy the whole `cookie:` value and paste it in.
+**Crunchbase sessions last about five minutes.** Export the cookie immediately before you
+scrape — not five minutes earlier. The app decodes the expiry and shows you a live
+countdown, and warns you before starting a scrape that would outlast it.
+
+### With Cookie-Editor (easiest)
+
+1. Install [Cookie-Editor](https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm).
+2. Open `crunchbase.com` and make sure you are signed in.
+3. Click the Cookie-Editor icon in the toolbar.
+4. **Export** (bottom right) → **Export as JSON**. It copies to your clipboard.
+5. Paste it into the cookie box and hit **Check search** right away.
+
+### Without the extension
+
+`F12` → **Network** → reload → click any `crunchbase.com` request → under
+**Request Headers**, copy the whole `cookie:` value.
+
+Both formats are accepted — the JSON array and the raw `name=value; name=value` header.
 
 Your cookie is your login. It is held in memory for the duration of the scrape and is
 never written to disk or sent anywhere except Crunchbase. Don't paste it into anything
@@ -81,6 +95,7 @@ filters — by location, headcount, or founding year — and run each separately
 |---|---|
 | `server.js` | Static host + two endpoints: `/api/inspect`, `/api/scrape` (server-sent events) |
 | `crunchbase.js` | Talks to Crunchbase's `v4` endpoints: parsing, retries, cursor pagination, the reverse sweep |
+| `cookies.js` | Accepts Cookie-Editor JSON or a raw header; decodes session expiry |
 | `flatten.js` | Shape-driven flattening of nested entities into CSV columns |
 | `public/` | The three-step interface |
 | `test/fake-crunchbase.js` | Stubs `fetch` with a synthetic Crunchbase for `npm run demo` |
@@ -90,6 +105,16 @@ filling within a second or two and the CSV is assembled client-side.
 
 Requests are paced with backoff and retry on 429 and 5xx. Pulling tens of thousands of
 records will take a few minutes; that pacing is deliberate.
+
+## If a scrape stops early
+
+Crunchbase's `authcookie` is a short-lived JWT — roughly five minutes. A large pull can
+outlive it. When that happens the run stops with a clear message and **the rows already
+retrieved stay downloadable**, so nothing is lost. Grab a fresh cookie and run the
+remainder.
+
+To avoid it entirely, either scrape in chunks that fit the window, or re-export right
+before you start.
 
 ## Notes
 

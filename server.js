@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const cb = require('./crunchbase');
 const { flattenEntity, orderColumns } = require('./flatten');
+const { normalizeCookie, auditCookie, sessionLife } = require('./cookies');
 
 const PORT = process.env.PORT || 4300;
 const PUBLIC = path.join(__dirname, 'public');
@@ -41,17 +42,25 @@ function describe(def) {
 }
 
 async function handleInspect(req, res) {
-  const { cookie, url } = await readBody(req);
-  if (!cookie || !String(cookie).trim()) return json(res, 400, { error: 'Paste your Crunchbase cookie first.' });
-  if (!url || !String(url).trim()) return json(res, 400, { error: 'Paste a Crunchbase search URL first.' });
+  const body = await readBody(req);
+  if (!body.url || !String(body.url).trim()) return json(res, 400, { error: 'Paste a Crunchbase search URL first.' });
 
-  const { collection, slug } = cb.parseSearchUrl(url);
+  const cookie = normalizeCookie(body.cookie);
+  const audit = auditCookie(cookie);
+  if (audit.missing.length === 2) return json(res, 400, { error:
+    'Those cookies do not include a Crunchbase login. Make sure you are signed in, ' +
+    'and export the cookies for www.crunchbase.com (the export must contain "authcookie").' });
+
+  const { collection, slug } = cb.parseSearchUrl(body.url);
   const def = await cb.getDefinition(cookie, collection, slug);
   if (!def || !def.query) throw new Error('That search returned no filter definition. Is it a saved Advanced Search?');
   const count = await cb.getCount(cookie, collection, def);
 
   json(res, 200, {
     collection, slug, count,
+    cookieNames: audit.names.length,
+    cookieWarning: audit.missing.length ? `Missing ${audit.missing.join(' and ')} — the scrape may stop early if the session expires.` : null,
+    session: sessionLife(cookie),
     fields: def.field_ids || [],
     order: def.order || [],
     filters: describe(def),
@@ -61,8 +70,10 @@ async function handleInspect(req, res) {
 }
 
 async function handleScrape(req, res) {
-  const { cookie, url, limit } = await readBody(req);
-  const { collection, slug } = cb.parseSearchUrl(url);
+  const body = await readBody(req);
+  const cookie = normalizeCookie(body.cookie);
+  const limit = body.limit;
+  const { collection, slug } = cb.parseSearchUrl(body.url);
 
   res.writeHead(200, {
     'content-type': 'text/event-stream; charset=utf-8',
@@ -76,6 +87,10 @@ async function handleScrape(req, res) {
   req.on('close', () => { closed = true; });
 
   try {
+    const life = sessionLife(cookie);
+    if (life && life.secondsLeft <= 0)
+      throw new Error('This cookie expired ' + Math.abs(life.secondsLeft) +
+        's ago. Crunchbase authcookies last about 5 minutes — re-export and start again.');
     const def = await cb.getDefinition(cookie, collection, slug);
     const total = await cb.getCount(cookie, collection, def);
     const want = Math.max(1, Math.min(Number(limit) || total, total));

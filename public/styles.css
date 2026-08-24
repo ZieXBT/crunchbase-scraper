@@ -76,9 +76,12 @@ code{font:12.5px var(--mono);background:var(--bg);padding:1px 5px;border-radius:
 .stat .n.mono{font-family:var(--mono);font-size:14px;font-weight:500;word-break:break-all;padding-top:8px}
 .stat .k{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-top:5px}
 
+.notice.tight{margin:14px 0 0;font-size:13px}
 .notice{border:1px solid var(--warn-line);background:var(--warn-soft);border-radius:6px;
   padding:12px 15px;font-size:13.5px;margin-top:16px}
 .notice.bad{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.notice a{color:inherit}
+.stat .n.warn{color:var(--bad)}
 
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card)}
 table{border-collapse:collapse;width:100%;font-size:13.5px}

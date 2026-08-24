@@ -31,16 +31,28 @@
 
     <label for="cookie">Crunchbase cookie</label>
     <textarea id="cookie" rows="3" spellcheck="false" autocomplete="off"
-              placeholder="Paste the full cookie string here"></textarea>
+              placeholder="Paste the Cookie-Editor JSON export, or a raw cookie header"></textarea>
+    <p class="hint">Both formats work — the JSON array from Cookie-Editor, or a <code>name=value; name=value</code> header.</p>
+
+    <div class="notice tight">
+      <b>Crunchbase sessions last about 5 minutes.</b> Export your cookie immediately before
+      you scrape, not earlier. If it expires you will be told exactly how long ago.
+    </div>
+
     <details class="how">
       <summary>How do I get my cookie?</summary>
+      <p><b>With the Cookie-Editor extension</b> (easiest):</p>
       <ol>
-        <li>Open Crunchbase in Chrome while signed in.</li>
-        <li>Press <kbd>F12</kbd> → <b>Network</b> tab → reload the page.</li>
-        <li>Click any request to <code>crunchbase.com</code>.</li>
-        <li>Under <b>Request Headers</b>, copy the entire <code>cookie:</code> value.</li>
+        <li>Install <a href="https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank" rel="noopener">Cookie-Editor</a>.</li>
+        <li>Open <code>crunchbase.com</code> in a tab and make sure you are signed in.</li>
+        <li>Click the Cookie-Editor icon in the toolbar.</li>
+        <li>Click <b>Export</b> (bottom right) → <b>Export as JSON</b>. It copies to your clipboard.</li>
+        <li>Paste it in the box above and hit Check search <em>right away</em>.</li>
       </ol>
-      <p class="warn">Your cookie is your login. Keep it private and never commit it anywhere.</p>
+      <p><b>Without the extension:</b> <kbd>F12</kbd> → <b>Network</b> → reload → click any
+         <code>crunchbase.com</code> request → under <b>Request Headers</b> copy the whole
+         <code>cookie:</code> value.</p>
+      <p class="warn">Your cookie is your login. Keep it private, and never commit it anywhere.</p>
     </details>
 
     <div class="row">
@@ -57,8 +69,10 @@
       <div class="stat"><span class="n" id="count">—</span><span class="k">Records found</span></div>
       <div class="stat"><span class="n" id="ncols">—</span><span class="k">Columns</span></div>
       <div class="stat"><span class="n mono" id="coll">—</span><span class="k">Collection</span></div>
+      <div class="stat"><span class="n" id="sess">—</span><span class="k">Session left</span></div>
     </div>
 
+    <div id="sesswarn" class="notice hidden"></div>
     <div id="capwarn" class="notice hidden"></div>
 
     <h3>Filters on this search</h3>

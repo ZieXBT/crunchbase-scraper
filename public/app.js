@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 const nf = new Intl.NumberFormat('en-US');
 
-const state = { cookie:'', url:'', total:0, cap:10000, rows:[], cols:[], abort:null, t0:0 };
+const state = { cookie:'', url:'', total:0, cap:10000, rows:[], cols:[], abort:null, t0:0, session:null };
 
 function step(n){
   ['s1','s2','s3'].forEach((id,i)=>$(id).classList.toggle('hidden', i !== n-1));
@@ -36,7 +36,7 @@ $('check').addEventListener('click', async () => {
     if (!r.ok) throw new Error(d.error || 'Could not read that search.');
     if (!d.count) throw new Error('That search matched 0 records. Widen the filters and try again.');
 
-    Object.assign(state, { cookie, url, total:d.count, cap:d.windowCap });
+    Object.assign(state, { cookie, url, total:d.count, cap:d.windowCap, session:d.session });
     $('count').textContent = nf.format(d.count);
     $('ncols').textContent = (d.fields || []).length || '—';
     $('coll').textContent  = d.collection;
@@ -45,6 +45,19 @@ $('check').addEventListener('click', async () => {
       ? d.filters.map(f =>
           `<tr><td>${esc(f.field)}</td><td class="op">${esc(f.op)}</td><td>${esc(f.values)}</td></tr>`).join('')
       : '<tr><td colspan="3">No filters — this search returns the whole collection.</td></tr>';
+
+    // session countdown — Crunchbase authcookies live ~5 minutes
+    const sEl = $('sess'), sw = $('sesswarn');
+    if (d.session && Number.isFinite(d.session.secondsLeft)) {
+      const left = d.session.secondsLeft;
+      sEl.textContent = left > 0 ? mmss(left) : 'expired';
+      sEl.classList.toggle('warn', left < 120);
+      if (left <= 0) {
+        sw.classList.remove('hidden');
+        sw.innerHTML = `<b>This cookie has expired.</b> Re-export it from Cookie-Editor and paste it again — Crunchbase sessions last about 5 minutes.`;
+      } else sw.classList.add('hidden');
+      startTicker(d.session.exp);
+    } else { sEl.textContent = 'n/a'; sw.classList.add('hidden'); }
 
     const reach = Math.min(d.count, d.reachable || d.count);
     const w = $('capwarn');
@@ -67,12 +80,35 @@ $('check').addEventListener('click', async () => {
 });
 
 /* ---------- step 2: amount ---------- */
+const mmss = s => `${Math.floor(s/60)}:${String(Math.max(0,s%60)).padStart(2,'0')}`;
+let ticker = null;
+function startTicker(exp){
+  clearInterval(ticker);
+  ticker = setInterval(() => {
+    const left = exp - Math.floor(Date.now()/1000);
+    const el = $('sess');
+    el.textContent = left > 0 ? mmss(left) : 'expired';
+    el.classList.toggle('warn', left < 120);
+    if (left <= 0) clearInterval(ticker);
+    updateEta();
+  }, 1000);
+}
+
 const clamp = v => Math.max(1, Math.min(+$('range').max, Number(v) || 1));
 function updateEta(){
   const n = clamp($('amount').value);
   const secs = Math.ceil(n / 1000) * 2.2;
-  $('etahint').textContent =
-    `${nf.format(n)} of ${nf.format(state.total)} records · roughly ${secs < 60 ? Math.max(3, Math.round(secs)) + ' seconds' : Math.round(secs/60) + ' minutes'}.`;
+  const human = secs < 60 ? Math.max(3, Math.round(secs)) + ' seconds' : Math.round(secs/60) + ' minutes';
+  let txt = `${nf.format(n)} of ${nf.format(state.total)} records · roughly ${human}.`;
+
+  // a scrape that outlives the session will die partway through — say so up front
+  if (state.session && Number.isFinite(state.session.exp)) {
+    const left = state.session.exp - Math.floor(Date.now()/1000);
+    if (left > 0 && secs > left)
+      txt += `  ⚠ Longer than the ${mmss(left)} left on your session — it will stop early. ` +
+             `Scrape fewer records, or re-export a fresh cookie first.`;
+  }
+  $('etahint').textContent = txt;
 }
 $('range').addEventListener('input', () => { $('amount').value = $('range').value; updateEta(); });
 $('amount').addEventListener('input', () => { $('range').value = clamp($('amount').value); updateEta(); });
@@ -181,7 +217,9 @@ function finish(stopped){
 }
 function fail(msg){
   state.abort = null;
-  $('s3err').textContent = msg || 'Scrape failed.';
+  const expired = /expired|rejected the cookie|403|401/i.test(msg || '');
+  $('s3err').innerHTML = esc(msg || 'Scrape failed.') + (expired && state.rows.length
+    ? ' <b>The rows already retrieved are still complete — download them, then re-export a fresh cookie to get the rest.</b>' : '');
   $('s3err').classList.remove('hidden');
   $('runtitle').textContent = 'Failed';
   $('runsub').textContent = 'Any rows already retrieved are still downloadable.';

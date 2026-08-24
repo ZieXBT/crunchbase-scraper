@@ -14,7 +14,7 @@
   const BASE = location.origin;
   let PAGE = 1000; const CAP = 10000;
   const nf = new Intl.NumberFormat('en-US');
-  const S = { def:null, coll:null, total:0, reach:0, rows:[], cols:[], stop:false, t0:0 };
+  const S = { def:null, coll:null, total:0, reach:0, rows:[], cols:[], stop:false, t0:0, fields:null, dropped:[] };
 
   /* ---------------- api ---------------- */
   const api = async (path, opts={}) => {
@@ -47,6 +47,27 @@
       } catch {}
     }
     return 15;
+  }
+
+  // A non-Pro account can't select Pro-gated fields (website, linkedin, …). The API
+  // names the offending field_ids in its 400, so drop them and retry until it passes.
+  async function resolveFields(coll){
+    let fields = (S.def.field_ids || ['identifier']).slice();
+    const dropped = [];
+    for (let i = 0; i < 8; i++){
+      const r = await fetch(`${BASE}/v4/data/searches/${encodeURIComponent(coll)}?source=slug_advanced_search`,
+        { method:'POST', credentials:'include', headers:{'content-type':'application/json','accept':'application/json'},
+          body: JSON.stringify({ field_ids:fields, order:S.def.order, query:S.def.query, limit:1 }) });
+      if (r.ok) return { fields, dropped };
+      const j = await r.json().catch(()=>[]);
+      const bad = [...new Set((Array.isArray(j)?j:[]).filter(e=>e&&e.field_id).map(e=>e.field_id))];
+      if (!bad.length) return { fields, dropped };            // 400 for some other reason; let the scrape surface it
+      dropped.push(...bad);
+      fields = fields.filter(f => !bad.includes(f));
+      if (!fields.length) fields = ['identifier'];
+      await sleep(300);
+    }
+    return { fields, dropped };
   }
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const flip = o => (o||[]).map(x => ({...x, sort: x.sort === 'desc' ? 'asc' : 'desc'}));
@@ -176,18 +197,22 @@
       const c = await search(collection, { field_ids:['identifier'], order:S.def.order, query:S.def.query, limit:1 });
       S.total = c.count || 0;
       PAGE = await detectPageSize(collection);
+      const rf = await resolveFields(collection);
+      S.fields = rf.fields; S.dropped = rf.dropped;
       if (!S.total) throw new Error('This search matched 0 records.');
       S.reach = S.total > CAP ? Math.min(S.total, CAP*2) : S.total;
 
       body.innerHTML = `
         <div class="cbs-stats">
           <div class="cbs-stat"><b>${nf.format(S.total)}</b><span>Records found</span></div>
-          <div class="cbs-stat"><b>${(S.def.field_ids||[]).length}</b><span>Columns</span></div>
+          <div class="cbs-stat"><b>${(S.fields||S.def.field_ids||[]).length}</b><span>Columns</span></div>
           <div class="cbs-stat"><b style="font-size:14px;font-family:ui-monospace,monospace;padding-top:6px">${esc(collection)}</b><span>Collection</span></div>
         </div>
         ${S.total > CAP ? `<div class="cbs-note">Crunchbase stops paginating at <b>${nf.format(CAP)}</b> rows per sort order.
           Running the sort in reverse reaches about <b>${nf.format(S.reach)}</b> of the ${nf.format(S.total)} matches.
           For the rest, split the search into narrower filters.</div>` : ''}
+        ${S.dropped.length ? `<div class="cbs-note">Your Crunchbase plan can't export ${S.dropped.length} field${S.dropped.length>1?'s':''}
+          (<b>${S.dropped.map(esc).join(', ')}</b>). They'll be left out. A Pro plan includes them.</div>` : ''}
         <p class="cbs-h3">Filters on this search</p>
         <table class="cbs-f"><tbody>${
           describe(S.def).map(r=>`<tr><td>${esc(r[0])}</td><td class="op">${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')
@@ -243,7 +268,7 @@
     async function sweep(ord){
       let after = null;
       while (got < want && !S.stop) {
-        const b = { field_ids:S.def.field_ids, order:ord, query:S.def.query, limit:Math.min(PAGE, want-got) };
+        const b = { field_ids:S.fields || S.def.field_ids, order:ord, query:S.def.query, limit:Math.min(PAGE, want-got) };
         if (after) b.after_id = after;
         const j = await search(S.coll, b);
         const ents = j.entities || [];

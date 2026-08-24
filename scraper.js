@@ -11,10 +11,11 @@
   'use strict';
   if (window.__cbScraper) { window.__cbScraper.open(); return; }
 
-  const BASE = location.origin;
+  const BASE = location.origin;                       // where we send API requests
+  const CB   = 'https://www.crunchbase.com';          // canonical host for links in the CSV
   let PAGE = 1000; const CAP = 10000;
   const nf = new Intl.NumberFormat('en-US');
-  const S = { def:null, coll:null, total:0, reach:0, rows:[], cols:[], stop:false, t0:0, fields:null, dropped:[], canPaginate:true };
+  const S = { def:null, coll:null, total:0, reach:0, rows:[], cols:[], stop:false, t0:0, fields:null, dropped:[], canPaginate:true, url:location.href };
 
   /* ---------------- api ---------------- */
   const api = async (path, opts={}) => {
@@ -107,7 +108,7 @@
       if (v == null) { out[k] = ''; continue; }
       if (k === 'identifier' && !Array.isArray(v) && typeof v === 'object') {
         out.name = v.value || '';
-        out.crunchbase_url = v.permalink ? `${BASE}/${v.entity_def_id || 'organization'}/${v.permalink}` : '';
+        out.crunchbase_url = v.permalink ? `${CB}/${v.entity_def_id || 'organization'}/${v.permalink}` : '';
         continue;
       }
       if (Array.isArray(v)) {
@@ -159,6 +160,10 @@
   .cbs-f td{padding:7px 11px;border-bottom:1px solid #1e262e}
   .cbs-f td:first-child{font-weight:600;white-space:nowrap;width:1%}
   .cbs-f td.op{color:#7d8b98;white-space:nowrap;width:1%;font-size:12px}
+  .cbs-url{display:flex;gap:8px;margin-bottom:18px}
+  .cbs-url input{flex:1;padding:9px 11px;border-radius:5px;border:1px solid #33404c;
+    background:#0f1418;color:#e7edf2;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
+  .cbs-url input:focus{outline:2px solid #4d9bf0;outline-offset:1px;border-color:transparent}
   .cbs-amt{display:flex;gap:12px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
   .cbs-amt input[type=range]{flex:1;min-width:180px;accent-color:#4d9bf0}
   .cbs-amt input[type=number]{width:110px;padding:8px 10px;border-radius:5px;border:1px solid #33404c;background:#0f1418;color:#e7edf2;font-variant-numeric:tabular-nums}
@@ -210,7 +215,7 @@
   async function review(){
     body.innerHTML = '<p class="cbs-hint">Reading this search…</p>';
     try {
-      const { collection, slug } = parseUrl(location.pathname);
+      const { collection, slug } = parseUrl(S.url);
       S.coll = collection;
       S.def = await api(`/v4/md/searches/${encodeURIComponent(collection)}/${encodeURIComponent(slug)}`);
       const c = await search(collection, { field_ids:['identifier'], order:S.def.order, query:S.def.query, limit:1 });
@@ -224,6 +229,12 @@
       S.reach = S.total > CAP ? Math.min(S.total, CAP*2) : S.total;
 
       body.innerHTML = `
+        <p class="cbs-h3">Search URL</p>
+        <div class="cbs-url">
+          <input id="cbs-src" type="url" spellcheck="false" value="${esc(S.url)}"
+                 placeholder="https://www.crunchbase.com/discover/<collection>/<id>">
+          <button class="cbs-btn cbs-g" id="cbs-load">Load</button>
+        </div>
         <div class="cbs-stats">
           <div class="cbs-stat"><b>${nf.format(S.total)}</b><span>Records found</span></div>
           <div class="cbs-stat"><b>${(S.fields||S.def.field_ids||[]).length}</b><span>Columns</span></div>
@@ -261,9 +272,24 @@
       nu.oninput = () => { rg.value = Math.max(1, Math.min(S.reach, +nu.value||1)); eta(); };
       body.querySelector('#cbs-all').onclick = () => { nu.value = S.reach; rg.value = S.reach; eta(); };
       body.querySelector('#cbs-go').onclick = () => run(Math.max(1, Math.min(S.reach, +nu.value||1)));
+      const srcEl = body.querySelector('#cbs-src');
+      const load = () => { const v = srcEl.value.trim(); if (!v) return; S.url = v; review(); };
+      body.querySelector('#cbs-load').onclick = load;
+      srcEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); load(); } });
       eta();
     } catch (e) {
-      body.innerHTML = `<div class="cbs-note bad">${esc(e.message)}</div>`;
+      body.innerHTML = `
+        <p class="cbs-h3">Search URL</p>
+        <div class="cbs-url">
+          <input id="cbs-src" type="url" spellcheck="false" value="${esc(S.url)}"
+                 placeholder="https://www.crunchbase.com/discover/<collection>/<id>">
+          <button class="cbs-btn cbs-g" id="cbs-load">Load</button>
+        </div>
+        <div class="cbs-note bad">${esc(e.message)}</div>`;
+      const srcEl = body.querySelector('#cbs-src');
+      const load = () => { const v = srcEl.value.trim(); if (!v) return; S.url = v; review(); };
+      body.querySelector('#cbs-load').onclick = load;
+      srcEl.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); load(); } });
     }
   }
 

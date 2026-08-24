@@ -14,7 +14,8 @@ Open your search on Crunchbase while signed in, press <kbd>F12</kbd> → **Conso
 fetch('https://raw.githubusercontent.com/ZieXBT/crunchbase-scraper/main/scraper.js').then(r=>r.text()).then(eval)
 ```
 
-That's it. A panel opens over the page:
+That's it. A panel opens over the page, pre-filled with the search you are on. You can
+also paste a different Crunchbase search URL into the **Search URL** box and hit Load.
 
 ```
 ┌── Review ─────────┐   ┌── Choose ─────────┐   ┌── Export ─────────┐
@@ -26,7 +27,18 @@ That's it. A panel opens over the page:
 Prefer a button? Make a bookmark with that same line prefixed by `javascript:` as the URL,
 and it becomes one click on any Crunchbase page.
 
-### Getting your search URL
+### Try it without an account
+
+[`index.html`](index.html) is a self-contained demo: 1,250 made-up records, no Crunchbase
+call, no login. Open it directly, or serve the folder and visit the root:
+
+```bash
+python3 -m http.server 4310 --directory . 
+```
+
+Same interface as the real thing, including the CSV download.
+
+## Getting your search URL
 
 Crunchbase → **Advanced Search** → build your filters → the address bar looks like:
 

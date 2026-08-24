@@ -1,0 +1,21 @@
+{
+  "name": "crunchbase-scraper",
+  "version": "1.0.0",
+  "description": "Point-and-click Crunchbase search scraper. Paste a cookie and a saved-search URL, see the record count, pick how many rows, watch the table fill, download the CSV.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "demo": "node --require ./test/fake-crunchbase.js server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "crunchbase",
+    "scraper",
+    "csv",
+    "lead-generation",
+    "b2b-data"
+  ],
+  "license": "MIT"
+}

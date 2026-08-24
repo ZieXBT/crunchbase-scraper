@@ -106,6 +106,23 @@ filling within a second or two and the CSV is assembled client-side.
 Requests are paced with backoff and retry on 429 and 5xx. Pulling tens of thousands of
 records will take a few minutes; that pacing is deliberate.
 
+## Your Crunchbase plan decides how much you can pull
+
+This scrapes what your logged-in account is entitled to — nothing more. Crunchbase
+gates the export path by plan, and the scraper adapts to whatever yours allows:
+
+| Capability | Free / Basic account | Crunchbase Pro |
+|---|---|---|
+| Rows per request | 15 | 1,000 |
+| **Pagination (beyond the first page)** | **not allowed** | allowed |
+| Fields like website, linkedin, email, phone | not allowed | allowed |
+| Practical max per search | **~15 records, one page** | ~20,000 |
+
+On a non-Pro account the API returns *"insufficient permissions to paginate"* after the
+first page, so only that first page (up to 15 rows) can be exported. The review screen
+detects this and tells you before you start, and it drops any Pro-only fields
+automatically rather than erroring. Pulling thousands of records needs a Pro plan.
+
 ## If a scrape stops early
 
 Crunchbase's `authcookie` is a short-lived JWT — roughly five minutes. A large pull can

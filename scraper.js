@@ -14,14 +14,18 @@
   const BASE = location.origin;
   let PAGE = 1000; const CAP = 10000;
   const nf = new Intl.NumberFormat('en-US');
-  const S = { def:null, coll:null, total:0, reach:0, rows:[], cols:[], stop:false, t0:0, fields:null, dropped:[] };
+  const S = { def:null, coll:null, total:0, reach:0, rows:[], cols:[], stop:false, t0:0, fields:null, dropped:[], canPaginate:true };
 
   /* ---------------- api ---------------- */
   const api = async (path, opts={}) => {
     const r = await fetch(BASE + path, { credentials:'include', ...opts,
       headers:{ 'accept':'application/json', ...(opts.body?{'content-type':'application/json'}:{}) , ...(opts.headers||{}) }});
     if (r.status === 401 || r.status === 403) throw new Error('Crunchbase says you are signed out. Reload the page, sign in, and run this again.');
-    if (!r.ok) throw new Error('Crunchbase returned HTTP ' + r.status);
+    if (!r.ok) {
+      let detail = '';
+      try { const j = await r.json(); detail = (Array.isArray(j)&&j[0]&&j[0].message) || ''; } catch {}
+      throw new Error(detail || ('Crunchbase returned HTTP ' + r.status));
+    }
     return r.json();
   };
   const parseUrl = (raw) => {
@@ -68,6 +72,21 @@
       await sleep(300);
     }
     return { fields, dropped };
+  }
+
+  // Non-Pro accounts return a single page and reject after_id with a 'paginate' 403.
+  // Probe once so we can tell the user upfront instead of failing mid-scrape.
+  async function canPaginate(coll){
+    const one = await search(coll, { field_ids:['identifier'], order:S.def.order, query:S.def.query, limit:1 })
+      .catch(()=>null);
+    const uuid = one && one.entities && one.entities[0] && one.entities[0].uuid;
+    if (!uuid) return true;                       // inconclusive; assume yes
+    const r = await fetch(`${BASE}/v4/data/searches/${encodeURIComponent(coll)}?source=slug_advanced_search`,
+      { method:'POST', credentials:'include', headers:{'content-type':'application/json','accept':'application/json'},
+        body: JSON.stringify({ field_ids:['identifier'], order:S.def.order, query:S.def.query, limit:1, after_id:uuid }) });
+    if (r.ok) return true;
+    const j = await r.json().catch(()=>[]);
+    return !(Array.isArray(j) && j.some(e => /paginate/i.test(e.message||'')));
   }
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const flip = o => (o||[]).map(x => ({...x, sort: x.sort === 'desc' ? 'asc' : 'desc'}));
@@ -199,6 +218,8 @@
       PAGE = await detectPageSize(collection);
       const rf = await resolveFields(collection);
       S.fields = rf.fields; S.dropped = rf.dropped;
+      S.canPaginate = await canPaginate(collection);
+      if (!S.canPaginate) S.reach = Math.min(S.reach, PAGE);
       if (!S.total) throw new Error('This search matched 0 records.');
       S.reach = S.total > CAP ? Math.min(S.total, CAP*2) : S.total;
 
@@ -208,9 +229,12 @@
           <div class="cbs-stat"><b>${(S.fields||S.def.field_ids||[]).length}</b><span>Columns</span></div>
           <div class="cbs-stat"><b style="font-size:14px;font-family:ui-monospace,monospace;padding-top:6px">${esc(collection)}</b><span>Collection</span></div>
         </div>
-        ${S.total > CAP ? `<div class="cbs-note">Crunchbase stops paginating at <b>${nf.format(CAP)}</b> rows per sort order.
+        ${!S.canPaginate ? `<div class="cbs-note bad">Your Crunchbase plan does not allow pagination, so only the
+          first <b>${PAGE}</b> of ${nf.format(S.total)} records can be exported. Fetching the rest requires
+          <b>Crunchbase Pro</b>.</div>`
+        : (S.total > CAP ? `<div class="cbs-note">Crunchbase stops paginating at <b>${nf.format(CAP)}</b> rows per sort order.
           Running the sort in reverse reaches about <b>${nf.format(S.reach)}</b> of the ${nf.format(S.total)} matches.
-          For the rest, split the search into narrower filters.</div>` : ''}
+          For the rest, split the search into narrower filters.</div>` : '')}
         ${S.dropped.length ? `<div class="cbs-note">Your Crunchbase plan can't export ${S.dropped.length} field${S.dropped.length>1?'s':''}
           (<b>${S.dropped.map(esc).join(', ')}</b>). They'll be left out. A Pro plan includes them.</div>` : ''}
         <p class="cbs-h3">Filters on this search</p>
@@ -270,7 +294,12 @@
       while (got < want && !S.stop) {
         const b = { field_ids:S.fields || S.def.field_ids, order:ord, query:S.def.query, limit:Math.min(PAGE, want-got) };
         if (after) b.after_id = after;
-        const j = await search(S.coll, b);
+        let j;
+        try { j = await search(S.coll, b); }
+        catch (err) {
+          if (/paginate/i.test(err.message||'') || after) return; // plan blocks pagination, or a later page failed: keep what we have
+          throw err;                                              // first page failed for a real reason
+        }
         const ents = j.entities || [];
         if (!ents.length) return;
         after = ents[ents.length-1].uuid;

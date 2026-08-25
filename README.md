@@ -11,7 +11,7 @@ time, and download the file.
 Open your search on Crunchbase while signed in, press <kbd>F12</kbd> → **Console**, paste:
 
 ```js
-fetch('https://raw.githubusercontent.com/ZieXBT/crunchbase-scraper/main/scraper.js').then(r=>r.text()).then(eval)
+fetch('https://ziexbt.github.io/crunchbase-scraper/scraper.js').then(r=>r.text()).then(eval)
 ```
 
 That's it. A panel opens over the page, pre-filled with the search you are on. You can
@@ -29,14 +29,10 @@ and it becomes one click on any Crunchbase page.
 
 ### Try it without an account
 
-[`index.html`](index.html) is a self-contained demo: 1,250 made-up records, no Crunchbase
-call, no login. Open it directly, or serve the folder and visit the root:
-
-```bash
-python3 -m http.server 4310 --directory . 
-```
-
-Same interface as the real thing, including the CSV download.
+**[ziexbt.github.io/crunchbase-scraper](https://ziexbt.github.io/crunchbase-scraper/)** —
+a live demo with 1,250 made-up records. No Crunchbase call, no login, nothing installed.
+It loads the same `scraper.js` the real thing uses, so the demo cannot drift from the
+product.
 
 ## Getting your search URL
 

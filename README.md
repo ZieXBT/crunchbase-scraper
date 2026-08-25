@@ -43,24 +43,29 @@ just only get the first page.
 This is not on the Chrome Web Store, so you load it as an unpacked extension. Takes about
 thirty seconds and you only do it once.
 
-1. **Download the code**
-   ```bash
-   git clone https://github.com/vatsalngiam/crunchbase-scraper.git
-   ```
-   Or use **Code → Download ZIP** on GitHub and unzip it.
+**1. Download it**
 
-2. Open **`chrome://extensions`** in Chrome.
+👉 **[Download crunchbase-scraper.zip](https://github.com/vatsalngiam/crunchbase-scraper/releases/latest/download/crunchbase-scraper.zip)**
 
-3. Turn on **Developer mode** — the toggle in the top-right corner.
+Then **unzip it**. You get a folder called `crunchbase-scraper`.
 
-4. Click **Load unpacked** and select the `crunchbase-scraper` folder you just downloaded.
-   *(Select the folder itself — the one containing `manifest.json`.)*
+<sub>Prefer git? `git clone https://github.com/vatsalngiam/crunchbase-scraper.git` — then use the
+`extension` folder inside it in step 4.</sub>
 
-5. The extension appears in your toolbar. Click the 🧩 puzzle icon and pin it so it is
-   always visible.
+**2.** Open **`chrome://extensions`** in Chrome.
 
-> **Updating:** `git pull`, then press the ↻ reload button on the extension's card in
-> `chrome://extensions`.
+**3.** Turn on **Developer mode** — the toggle in the top-right corner.
+
+**4.** Click **Load unpacked** and select the unzipped **`crunchbase-scraper`** folder.
+
+> ⚠️ Select the folder that contains `manifest.json`. If Chrome says
+> *"Manifest file is missing or unreadable"*, you picked the wrong level — go one folder in.
+
+**5.** The extension appears in your toolbar. Click the 🧩 puzzle icon and pin it so it is
+always visible.
+
+> **Updating:** download the latest ZIP, replace the folder, then press ↻ on the extension's
+> card in `chrome://extensions`.
 
 Works in any Chromium browser — Chrome, Edge, Brave, Arc, Opera.
 
@@ -122,12 +127,14 @@ narrower filters (by location, headcount, or founding year) and run each separat
 
 ## How it works
 
-| File | Role |
-|---|---|
-| `manifest.json` | MV3 manifest; host permission for crunchbase.com |
-| `background.js` | Opens the app tab when the toolbar icon is clicked |
-| `app.html` | The three-step interface |
-| `app.js` | API calls, plan detection, pagination, flattening, CSV |
+```
+extension/
+├── manifest.json    MV3 manifest; host permission for crunchbase.com
+├── background.js    opens the app tab when the toolbar icon is clicked
+├── app.html         the three-step interface
+├── app.js           API calls, plan detection, pagination, flattening, CSV
+└── icon.png
+```
 
 It calls the same internal `v4` endpoints the Crunchbase website itself uses. Because the
 code runs inside an extension with host permission, requests carry your session normally —

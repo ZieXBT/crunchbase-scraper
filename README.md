@@ -105,8 +105,8 @@ Identity columns come first; `uuid` and long descriptions go last.
 
 ## How many records can it actually pull?
 
-Tested against a live 2.17-million-record company search: **111,000 records retrieved over
-112 consecutive requests, zero duplicates and zero errors**, and it was still going when the
+Tested against a live 2.17-million-record company search: **160,000 records retrieved over
+161 consecutive requests, zero duplicates and zero errors**, and it was still going when the
 test was stopped. There is no hard row cap in practice.
 
 What you should expect:

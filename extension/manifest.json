@@ -3,9 +3,40 @@
   "name": "Crunchbase Scraper",
   "version": "1.0.0",
   "description": "Paste a Crunchbase search link and export it to CSV.",
-  "permissions": ["cookies"],
-  "host_permissions": ["https://www.crunchbase.com/*"],
-  "action": { "default_title": "Crunchbase Scraper" },
-  "background": { "service_worker": "background.js" },
-  "icons": { "128": "icon.png" }
+  "permissions": [
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://www.crunchbase.com/*"
+  ],
+  "action": {
+    "default_title": "Crunchbase Scraper"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "128": "icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "app.html"
+      ],
+      "matches": [
+        "https://www.crunchbase.com/*"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.crunchbase.com/*"
+      ],
+      "js": [
+        "selftest.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
 }

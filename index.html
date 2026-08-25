@@ -138,7 +138,7 @@ const SCRAPER_URL = new URL('scraper.js', location.href).href + '?v=' + Date.now
 
 /* The scraper reads the collection + slug out of the path, so make the URL look like a
    Crunchbase search. replaceState changes the path without navigating. */
-history.replaceState({}, '', '/discover/organization.companies/demo-search');
+history.replaceState({}, '', new URL('discover/organization.companies/demo-search', location.href).pathname);
 
 document.getElementById('open').addEventListener('click', () => {
   if (window.__cbScraper) return window.__cbScraper.open();

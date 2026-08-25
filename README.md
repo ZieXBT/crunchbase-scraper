@@ -1,106 +1,149 @@
 # Crunchbase Scraper
 
-Pull any Crunchbase Advanced Search into a clean CSV. One line in your browser console —
-no install, no API key, nothing to sign up for, no cookie to paste.
+A Chrome extension that turns any Crunchbase Advanced Search into a CSV.
 
-You see how many records matched, choose how many you want, watch the table fill in real
-time, and download the file.
-
-## Use it
-
-Open your search on Crunchbase while signed in, press <kbd>F12</kbd> → **Console**, paste:
-
-```js
-fetch('https://ziexbt.github.io/crunchbase-scraper/scraper.js').then(r=>r.text()).then(eval)
-```
-
-That's it. A panel opens over the page, pre-filled with the search you are on. You can
-also paste a different Crunchbase search URL into the **Search URL** box and hit Load.
+Paste the search link, pick how many records you want, watch the table fill, download the file.
+No API key, no cookie to copy, no third-party service — it runs entirely in your browser using
+the Crunchbase session you are already signed into.
 
 ```
-┌── Review ─────────┐   ┌── Choose ─────────┐   ┌── Export ─────────┐
-│ 412 records       │ → │ how many rows     │ → │ live table        │
-│ filters decoded   │   │ (all by default)  │   │ download CSV      │
+┌── Paste ──────────┐   ┌── Review ─────────┐   ┌── Export ─────────┐
+│ search link       │ → │ record count      │ → │ live table        │
+│                   │   │ filters decoded   │   │ download CSV      │
 └───────────────────┘   └───────────────────┘   └───────────────────┘
 ```
 
-Prefer a button? Make a bookmark with that same line prefixed by `javascript:` as the URL,
-and it becomes one click on any Crunchbase page.
+---
 
-### Try it without an account
+## Requirements
 
-**[ziexbt.github.io/crunchbase-scraper](https://ziexbt.github.io/crunchbase-scraper/)** —
-a live demo with 1,250 made-up records. No Crunchbase call, no login, nothing installed.
-It loads the same `scraper.js` the real thing uses, so the demo cannot drift from the
-product.
+**You need a Crunchbase Pro account, and you must be signed in while using it.**
 
-## Getting your search URL
+Crunchbase gates its export API by plan. This is enforced on their servers — no extension can
+work around it:
 
-Crunchbase → **Advanced Search** → build your filters → the address bar looks like:
+| | Signed out / Free | **Pro (incl. free trial)** |
+|---|---|---|
+| Rows per request | 15 | **1,000** |
+| Pagination past the first page | ❌ blocked | ✅ allowed |
+| `website`, `linkedin`, email, phone fields | ❌ blocked | ✅ included |
+| Practical maximum per search | ~15 records | **~20,000 records** |
 
-```
-https://www.crunchbase.com/discover/organization.companies/439877ffd921c234cbca0f281143f6ff
-```
+**Crunchbase offers a 7-day free trial of Pro, and this extension works perfectly on it.**
+Start the trial, stay signed in, and you get the full 1,000-rows-per-request behaviour.
 
-Any collection works — companies, people, funding rounds, investors, acquisitions. Just run
-the snippet while that page is open.
+If you are signed out or on the free tier, the extension still runs — it detects your plan
+and tells you exactly what it can and cannot reach, rather than failing silently. You will
+just only get the first page.
 
-## Why it runs in the browser
+---
 
-Crunchbase sits behind Cloudflare bot protection that fingerprints the TLS handshake. A
-local script or server — Node, Python, curl — gets a `403` challenge no matter how good its
-cookie or headers are. Running inside the page means your browser makes the request: right
-fingerprint, your own live session, nothing to copy around and nothing to expire.
+## Install
 
-It also means your credentials never leave your browser. There is no server here to send
-them to.
+This is not on the Chrome Web Store, so you load it as an unpacked extension. Takes about
+thirty seconds and you only do it once.
+
+1. **Download the code**
+   ```bash
+   git clone https://github.com/ZieXBT/crunchbase-scraper.git
+   ```
+   Or use **Code → Download ZIP** on GitHub and unzip it.
+
+2. Open **`chrome://extensions`** in Chrome.
+
+3. Turn on **Developer mode** — the toggle in the top-right corner.
+
+4. Click **Load unpacked** and select the `crunchbase-scraper` folder you just downloaded.
+   *(Select the folder itself — the one containing `manifest.json`.)*
+
+5. The extension appears in your toolbar. Click the 🧩 puzzle icon and pin it so it is
+   always visible.
+
+> **Updating:** `git pull`, then press the ↻ reload button on the extension's card in
+> `chrome://extensions`.
+
+Works in any Chromium browser — Chrome, Edge, Brave, Arc, Opera.
+
+---
+
+## Use
+
+1. Sign in to Crunchbase.
+2. Build a search: **Crunchbase → Advanced Search →** apply your filters.
+3. Copy the address bar. It looks like:
+   ```
+   https://www.crunchbase.com/discover/organization.companies/439877ffd921c234cbca0f281143f6ff
+   ```
+4. Click the extension icon, paste the link, hit **Check**.
+5. Confirm the record count and filters, choose how many rows, hit **Start scraping**.
+6. **Download CSV** when it finishes.
+
+Any collection works — companies, people, investors, funding rounds, acquisitions.
+
+---
 
 ## What you get
 
-Columns follow whatever fields your saved search selected, tidied for spreadsheet use:
+The CSV columns follow whichever fields your saved search selected, cleaned up for
+spreadsheet use:
 
-- `identifier` split into a readable `name` plus a `crunchbase_url`
-- locations split into `city`, `region`, `country`, plus the full path
-- enum values title-cased (`micro_vc` → `Micro Vc`)
-- money fields resolved to their USD value
-- multi-line descriptions collapsed to one line
-- quote-escaped, UTF-8 with a BOM so Excel opens it correctly
+- `identifier` split into a readable `name` and a `crunchbase_url`
+- Locations split into `city`, `region`, `country`, plus the full location path
+- Enum values title-cased (`micro_vc` → `Micro Vc`)
+- Money fields resolved to their USD value
+- Multi-line descriptions collapsed to a single line
+- Fully quote-escaped, UTF-8 with a BOM so Excel opens it correctly
 
-Identity columns first, `uuid` and long descriptions last.
+Identity columns come first; `uuid` and long descriptions go last.
 
-## It adapts to your account
-
-Crunchbase gates the export path by plan, so the scraper probes what yours allows and tells
-you up front rather than failing halfway:
-
-| | Signed out / free | Crunchbase Pro |
-|---|---|---|
-| Rows per request | 15 | 1,000 |
-| Pagination past page 1 | not allowed | allowed |
-| website, linkedin, email, phone | not allowed | allowed |
-
-If a field is gated it is dropped from the request and named on the review screen. If
-pagination is blocked, you are told before you start that only the first page is reachable.
-
-**Signed out is the common gotcha** — an anonymous session looks like a broken scraper.
-If numbers seem capped, check you are actually logged in.
+---
 
 ## The 10,000-record ceiling
 
-Crunchbase stops paginating any single sort order at 10,000 rows, even when more match. The
-scraper detects that and re-runs the search with the sort reversed, merging on `uuid`, which
-reaches roughly 20,000 records on one search.
+Crunchbase stops paginating any single sort order at 10,000 rows, even when more match.
+The extension detects this and re-runs the search with the sort reversed, merging results
+on `uuid` — which reaches roughly **20,000 records** on a single search.
 
-Past that the tail is genuinely unreachable, and the review screen says so rather than
-handing you a short file that looks complete. Split the search into narrower filters — by
-location, headcount, or founding year — and run each.
+Beyond that the remainder is genuinely unreachable, and the review screen tells you so
+rather than handing you a truncated file that looks complete. Split the search into
+narrower filters (by location, headcount, or founding year) and run each separately.
+
+---
+
+## Privacy
+
+- Everything runs locally in your browser. There is no server and no analytics.
+- Your Crunchbase cookies are never read, copied, or stored. The browser attaches them
+  automatically, exactly as it does when you use the Crunchbase website.
+- The extension requests access to `https://www.crunchbase.com/*` and nothing else.
+- The CSV is built in memory and saved straight to your downloads folder.
+
+---
+
+## How it works
+
+| File | Role |
+|---|---|
+| `manifest.json` | MV3 manifest; host permission for crunchbase.com |
+| `background.js` | Opens the app tab when the toolbar icon is clicked |
+| `app.html` | The three-step interface |
+| `app.js` | API calls, plan detection, pagination, flattening, CSV |
+
+It calls the same internal `v4` endpoints the Crunchbase website itself uses. Because the
+code runs inside an extension with host permission, requests carry your session normally —
+which is also why an ordinary web page cannot do this (cross-origin requests to Crunchbase
+are blocked and cookies are not attached).
+
+Requests are paced deliberately. Pulling tens of thousands of rows takes a few minutes;
+going faster risks a rate limit on your account.
+
+---
 
 ## Notes
 
-- Uses Crunchbase's internal `v4` endpoints, the same ones the site calls in your browser.
-  They are not a documented public API and can change.
-- Requests are paced deliberately. Pulling tens of thousands of rows takes a few minutes;
-  going faster risks a rate limit on your account.
-- Scrape what your account can already see, and stay within Crunchbase's terms.
+- These are Crunchbase's internal endpoints, not a documented public API. They can change.
+- Scrape only what your account can already see, and stay within
+  [Crunchbase's Terms of Service](https://www.crunchbase.com/terms).
+- Not affiliated with or endorsed by Crunchbase.
 
-MIT.
+[MIT](LICENSE)

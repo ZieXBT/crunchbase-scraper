@@ -1,8 +1,0 @@
-{
-  "name": "crunchbase-scraper",
-  "version": "2.0.0",
-  "description": "Pull any Crunchbase Advanced Search into a CSV. One line in the browser console — no install, no API key, no cookie to paste.",
-  "keywords": ["crunchbase", "scraper", "csv", "bookmarklet", "lead-generation", "b2b-data"],
-  "license": "MIT",
-  "files": ["scraper.js"]
-}

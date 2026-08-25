@@ -27,7 +27,7 @@ work around it:
 | Rows per request | 15 | **1,000** |
 | Pagination past the first page | ❌ blocked | ✅ allowed |
 | `website`, `linkedin`, email, phone fields | ❌ blocked | ✅ included |
-| Practical maximum per search | ~15 records | **~20,000 records** |
+| Practical maximum per search | ~15 records | **100,000+ records** |
 
 **Crunchbase offers a 7-day free trial of Pro, and this extension works perfectly on it.**
 Start the trial, stay signed in, and you get the full 1,000-rows-per-request behaviour.
@@ -103,15 +103,29 @@ Identity columns come first; `uuid` and long descriptions go last.
 
 ---
 
-## The 10,000-record ceiling
+## How many records can it actually pull?
 
-Crunchbase stops paginating any single sort order at 10,000 rows, even when more match.
-The extension detects this and re-runs the search with the sort reversed, merging results
-on `uuid` — which reaches roughly **20,000 records** on a single search.
+Tested against a live 2.17-million-record company search: **111,000 records retrieved over
+112 consecutive requests, zero duplicates and zero errors**, and it was still going when the
+test was stopped. There is no hard row cap in practice.
 
-Beyond that the remainder is genuinely unreachable, and the review screen tells you so
-rather than handing you a truncated file that looks complete. Split the search into
-narrower filters (by location, headcount, or founding year) and run each separately.
+What you should expect:
+
+- **1,000 records per request** on Pro.
+- **Deep pagination gets slower.** The first few thousand rows come back in seconds. By
+  100,000 rows, requests take roughly a minute each — Crunchbase gets slower the deeper the
+  cursor goes, not the extension.
+- **Rough timing:** ~10,000 rows in a couple of minutes; ~100,000 rows in about two hours,
+  running unattended.
+
+For very large pulls, it is usually faster to split the search into narrower filters (by
+location, headcount, or founding year) and run each separately, rather than paginating deep
+into a single one.
+
+> Some collections do enforce a 10,000-row limit per sort order. When the extension hits
+> one, it re-runs the search with the sort reversed and merges on `uuid`, which roughly
+> doubles the reachable window. It detects this automatically — you do not need to do
+> anything.
 
 ---
 

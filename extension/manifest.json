@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Crunchbase Scraper",
+  "version": "1.0.0",
+  "description": "Paste a Crunchbase search link and export it to CSV.",
+  "permissions": ["cookies"],
+  "host_permissions": ["https://www.crunchbase.com/*"],
+  "action": { "default_title": "Crunchbase Scraper" },
+  "background": { "service_worker": "background.js" },
+  "icons": { "128": "icon.png" }
+}

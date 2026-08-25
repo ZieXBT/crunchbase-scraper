@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crunchbase Scraper</title>
+<style>
+:root{
+  --bg:#0e1216; --card:#161c22; --ink:#e8edf2; --ink2:#a3b0bd; --ink3:#7a8895;
+  --line:#242d36; --line2:#33404c; --accent:#4d9bf0; --accent-ink:#0e1216;
+  --good:#4cc38a; --bad:#f08a72; --bad-bg:#2a1a17; --warn:#e3b95f; --warn-bg:#241f14;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.top{display:flex;align-items:center;gap:9px;padding:14px 22px;border-bottom:1px solid var(--line);background:var(--card)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.top b{font-weight:650;letter-spacing:-.01em}
+main{max-width:1080px;margin:26px auto;padding:0 22px 70px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:24px;margin-bottom:18px}
+h1{font-size:23px;letter-spacing:-.02em;margin:0 0 6px}
+.sub{color:var(--ink2);margin:0 0 20px}
+label{display:block;font-weight:600;font-size:13px;margin:0 0 7px}
+.row{display:flex;gap:10px}
+input[type=url],input[type=number]{padding:11px 13px;border:1px solid var(--line2);border-radius:6px;
+  background:var(--bg);color:var(--ink);font:13.5px var(--mono);width:100%}
+input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+button{font:600 14px ui-sans-serif,system-ui;padding:11px 20px;border-radius:6px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.primary{background:var(--accent);color:var(--accent-ink)}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.ghost{background:transparent;border-color:var(--line2);color:var(--ink2)}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.hint{color:var(--ink3);font-size:13px;margin:9px 0 0}
+.msg{font-size:13.5px;color:var(--ink2);margin-top:12px}
+.msg.bad{color:var(--bad)}
+.note{border:1px solid var(--warn);background:var(--warn-bg);border-radius:6px;padding:12px 15px;font-size:13.5px;margin-top:16px;line-height:1.5}
+.note.bad{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+.hidden{display:none!important}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-bottom:18px}
+.stat{background:var(--card);padding:15px}
+.stat b{display:block;font-size:25px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat span{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-top:5px}
+h3{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink3);margin:24px 0 10px;font-weight:600}
+.filters{width:100%;border-collapse:collapse;font-size:13.5px}
+.filters td{padding:8px 12px;border-bottom:1px solid var(--line)}
+.filters td:first-child{font-weight:600;white-space:nowrap;width:1%}
+.filters td.op{color:var(--ink3);font-size:12.5px;white-space:nowrap;width:1%}
+.amt{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.amt input[type=range]{flex:1;min-width:220px;accent-color:var(--accent)}
+.amt input[type=number]{width:120px;font-family:var(--mono)}
+.bar{height:7px;background:var(--line);border-radius:99px;overflow:hidden;margin:14px 0 8px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.bar.done i{background:var(--good)}
+.wrap{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:7px;margin-top:14px}
+table.data{border-collapse:collapse;width:100%;font-size:13px}
+.data th{position:sticky;top:0;background:var(--card);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line2);
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);white-space:nowrap}
+.data td{padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.acts{display:flex;gap:9px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="top"><span class="dot"></span><b>Crunchbase Scraper</b></div>
+
+<main>
+  <section class="card" id="s1">
+    <h1>Paste a Crunchbase search link</h1>
+    <p class="sub">You need to be signed in to Crunchbase in this browser. Nothing else to set up.</p>
+    <label for="url">Search URL</label>
+    <div class="row">
+      <input id="url" type="url" spellcheck="false" autocomplete="off"
+             placeholder="https://www.crunchbase.com/discover/organization.companies/439877ffd921c234cbca0f281143f6ff">
+      <button class="primary" id="check">Check</button>
+    </div>
+    <p class="hint">Crunchbase → Advanced Search → build your filters → copy the address bar.</p>
+    <div id="s1msg" class="msg"></div>
+  </section>
+
+  <section class="card hidden" id="s2">
+    <div class="stats">
+      <div class="stat"><b id="count">—</b><span>Records found</span></div>
+      <div class="stat"><b id="ncols">—</b><span>Columns</span></div>
+      <div class="stat"><b id="coll" style="font-size:14px;font-family:var(--mono);padding-top:7px">—</b><span>Collection</span></div>
+    </div>
+    <div id="warn" class="note hidden"></div>
+    <h3>Filters on this search</h3>
+    <table class="filters"><tbody id="filters"></tbody></table>
+    <h3>How many records?</h3>
+    <div class="amt">
+      <input id="range" type="range" min="1" value="1">
+      <input id="amount" type="number" min="1" value="1">
+      <button class="ghost" id="all">All</button>
+    </div>
+    <p class="hint" id="eta"></p>
+    <div class="acts" style="margin-top:18px">
+      <button class="primary" id="start">Start scraping</button>
+      <button class="ghost" id="back">Back</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="s3">
+    <div class="head">
+      <div>
+        <h1 id="title" style="font-size:20px">Scraping…</h1>
+        <p class="sub" id="subtitle" style="margin:4px 0 0">Rows appear below as they arrive.</p>
+      </div>
+      <div class="acts">
+        <button class="primary" id="download" disabled>Download CSV</button>
+        <button class="ghost" id="stop">Stop</button>
+        <button class="ghost hidden" id="again">New scrape</button>
+      </div>
+    </div>
+    <div class="bar"><i id="fill"></i></div>
+    <p class="hint"><b id="got">0</b> of <b id="want">0</b> records<span id="rate"></span></p>
+    <div id="err" class="note bad hidden"></div>
+    <div class="wrap"><table class="data"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <p class="hint" id="preview"></p>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

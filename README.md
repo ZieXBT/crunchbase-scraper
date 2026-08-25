@@ -45,7 +45,7 @@ thirty seconds and you only do it once.
 
 1. **Download the code**
    ```bash
-   git clone https://github.com/ZieXBT/crunchbase-scraper.git
+   git clone https://github.com/vatsalngiam/crunchbase-scraper.git
    ```
    Or use **Code → Download ZIP** on GitHub and unzip it.
 
